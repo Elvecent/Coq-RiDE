@@ -8,6 +8,7 @@ Definition Name := string.
 
 Coercion name := fun (s : string) => s : Name.
 
+(* Non-empty list is a pair: an element and a list of elements *)
 Definition nelist A := (A * list A)%type.
 
 Inductive Span :=
@@ -18,7 +19,6 @@ Inductive SpanExp :=
 | SEName : Name -> SpanExp.
 
 Coercion SEName : Name >-> SpanExp.
-
 
 Notation "'span'" := (fun a b => SESpan (SSpan a b)) (at level 9).
 
@@ -139,9 +139,27 @@ Notation "'run' a b .. z" := (Run (a, cons b .. (cons z nil) ..))
 Notation "'bind' wre bve" := (Bind wre bve) (at level 9,
                                             wre at level 9).
 
+
+(* For mysterious reasons all run constructions have to be 
+   supplied with ": Expression" for their arguments. *)
 Check run
       ("a" : Expression)
       (get (ref @ "") : Expression).
 Check bind (!ref @ "") "a".
 
 Definition Program := list Command.
+
+Definition prog : Program :=
+  [
+    bind
+      (!ref @ "a")
+      (tree @ (span "a" "z")) ;
+
+    run
+      (get (ref @ "a") : Expression)
+      ("a" : Expression) ;
+
+    bind
+      (!ref @ "a" "b")
+      "wtf"
+  ].
