@@ -62,6 +62,7 @@ Notation "a ::: l" :=
   (a, l)
     (at level 100, right associativity) : term_scope.
 Notation "'!cell'" := TWCell : term_scope.
+Notation "'cell'" := TCell : term_scope.
 
 Import Coq.Lists.List.ListNotations.
 
@@ -69,6 +70,7 @@ Open Scope term_scope.
 Open Scope list_scope.
 Open Scope string_scope.
 
+Print term.
 
 Definition WTREE_ex1 : WTree WTREE :=
   !tree
@@ -84,6 +86,14 @@ Definition WTREE_ex2 : WTree WTREE :=
     (!var "x")
     ["a"]
     (or ("c" ::: ["d"])).
+
+Definition CELL_ex : term CELL :=
+  cell
+    (tree
+       #
+       nil
+       ⃞)
+    ("a" ::: ["b"]).
 
 Definition WREF_ex : term WREF :=
   !cell
@@ -104,5 +114,3 @@ Definition TREE_ex2 : Tree TREE :=
     (var "x")
     []
     ⃞.
-
-Print term.

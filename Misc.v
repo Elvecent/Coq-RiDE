@@ -24,3 +24,11 @@ Inductive sIn : string -> type -> Prop :=
 | InSpan : forall s s1 s2, s1 ⋞ s -> s ⋞ s2 -> s ∈ (SpanT s1 s2)
                   
 where "s ∈ T" := (sIn s T).
+
+Import ListNotations.
+
+Inductive memory : list syncat -> Type :=
+| MemEmpty : memory []
+| MemTree : forall {sc l}, Tree sc -> type -> memory l -> memory (sc :: l)
+.
+Print term.
