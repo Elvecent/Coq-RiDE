@@ -1,116 +1,147 @@
-Inductive syncat :=
-| TREE
-| WTREE
-| SPAN
-| HOLE
-| ENUM
-| WREF
-| CELL
-| VAR
-.
-
 Require Import Coq.Strings.String.
-
-Definition nelist a : Type := a * (list a).
-
-Inductive term : syncat -> Type :=
-| TRoot :
-    term TREE
-| TTree : forall {sc1 sc2}, Tree sc1 -> list string -> Span sc2 ->
-    term TREE
-| TWRoot :
-    term WTREE
-| TWTree : forall {sc1 sc2}, WTree sc1 -> list string -> Span sc2 ->
-    term WTREE
-| TSpan : string -> string ->
-    term SPAN
-| THole :
-    term HOLE
-| TOr : nelist string ->
-    term ENUM
-| TWCell : forall {sc}, WTree sc -> nelist string ->
-    term WREF
-| TCell : forall {sc}, Tree sc -> nelist string ->
-    term CELL
-| TVar : forall s : string,
-    term VAR
-                                             
-with WTree : syncat -> Type :=
-     | WTWT : term WTREE -> WTree WTREE
-     | WTV : term VAR -> WTree VAR
-
-with Span : syncat -> Type :=
-     | SS : term SPAN -> Span SPAN
-     | SH : term HOLE -> Span HOLE
-     | SE : term ENUM -> Span ENUM
-
-with Tree : syncat -> Type :=
-     | TT : term TREE -> Tree TREE
-     | TV : term VAR -> Tree VAR
-.
-
-Notation "#" := (TT TRoot) : term_scope.
-Notation "'tree'" := (fun t l s => TT (TTree t l s)) : term_scope.
-Notation "@" := (WTWT TWRoot) : term_scope.
-Notation "'!tree'" := (fun w l s => WTWT (TWTree w l s)) : term_scope.
-Notation "⃞" := (SH THole) : term_scope.
-Notation "'!var'" := (fun s => WTV (TVar s)) : term_scope.
-Notation "'var'" := (fun s => TV (TVar s)) : term_scope.
-Notation "'span'" := (fun s1 s2 => SS (TSpan s1 s2)) : term_scope.
-Notation "'or'" := (fun l => SE (TOr l)) : term_scope.
-Notation "a ::: l" :=
-  (a, l)
-    (at level 100, right associativity) : term_scope.
-Notation "'!cell'" := TWCell : term_scope.
-Notation "'cell'" := TCell : term_scope.
-
 Import Coq.Lists.List.ListNotations.
 
-Open Scope term_scope.
-Open Scope list_scope.
 Open Scope string_scope.
+Open Scope list_scope.
 
-Print term.
+Definition Name := string.
 
-Definition WTREE_ex1 : WTree WTREE :=
-  !tree
-    (!tree
-      @
-      ["a"; "b"]
-      (span "c" "d"))
-    ["e"]
-    ⃞.
+Coercion name := fun (s : string) => s : Name.
 
-Definition WTREE_ex2 : WTree WTREE :=
-  !tree
-    (!var "x")
-    ["a"]
-    (or ("c" ::: ["d"])).
+Definition nelist A := (A * list A)%type.
 
-Definition CELL_ex : term CELL :=
-  cell
-    (tree
-       #
-       nil
-       ⃞)
-    ("a" ::: ["b"]).
+Inductive Span :=
+| SSpan : Name -> Name -> Span.
 
-Definition WREF_ex : term WREF :=
-  !cell
-   (!tree
-     @
-     ["a"]
-     ⃞)
-   ("b" ::: ["c"]).
+Inductive SpanExp :=
+| SESpan : Span -> SpanExp
+| SEName : Name -> SpanExp.
 
-Definition TREE_ex1 : Tree TREE :=
-  tree
-    #
-    ["a"]
-    (or ("b" ::: [])).
+Coercion SEName : Name >-> SpanExp.
 
-Definition TREE_ex2 : Tree TREE :=
-  tree
-    (var "x")
-    []
-    ⃞.
+
+Notation "'span'" := (fun a b => SESpan (SSpan a b)) (at level 9).
+
+Check (span "a" "b") : SpanExp.
+
+Inductive WriteableTree :=
+| WTRoot : WriteableTree
+| WTTree : WriteableTree -> nelist SpanExp -> WriteableTree.
+
+Notation "'@'" := WTRoot (at level 6).
+Notation "'!tree' t a" := (WTTree t (a, [])) (at level 9,
+                                              t at level 9,
+                                              right associativity).
+Notation "'!tree' t a b .. z" := (WTTree t (a, cons b .. (cons z nil) ..))
+                                   (at level 9,
+                                    t at level 9,
+                                    a at level 9,
+                                    b at level 9).
+
+Check !tree @ (span "a" "b").
+Check (!tree @ (span "a" "b") (span "c" "g")).
+
+Inductive Tree :=
+| RTree : ReadableTree -> Tree
+| WTree : WriteableTree -> Tree
+
+with ReadableTree :=
+     | RTTree : Tree -> nelist SpanExp -> ReadableTree.
+
+Notation "'tree' t a" := (RTTree t (a, [])) (at level 9,
+                                             t at level 9,
+                                             right associativity).
+Notation "'tree' t a b .. z" := (RTTree t (a, cons b .. (cons z nil) ..))
+                                  (at level 9,
+                                   t at level 9,
+                                   a at level 9,
+                                   b at level 9).
+
+Coercion RTree : ReadableTree >-> Tree.
+Coercion WTree : WriteableTree >-> Tree.
+
+Check (tree @ (span "a" "b")).
+Check (tree @ (span "a" "b") (span "c" "d")).
+
+Inductive RRef :=
+| RRRef : Tree -> nelist Name -> RRef.
+
+Notation "'ref' t n" := (RRRef t (n, [])) (at level 9,
+                                           t at level 9,
+                                           right associativity).
+Notation "'ref' t a b .. z" := (RRRef t (a, cons b .. (cons z nil) ..))
+                                  (at level 9,
+                                   t at level 9,
+                                   a at level 9,
+                                   b at level 9).
+
+Check ref @ "a".
+
+Check ref @ "a" "b".
+
+Inductive Request :=
+| Get : RRef -> Request.
+
+Notation "'get' r" := (Get r) (at level 9).
+Check get (ref @ "a").
+
+Inductive BindableValue :=
+| BVRef : RRef -> BindableValue
+| BVTree : ReadableTree -> BindableValue
+| BVName : Name -> BindableValue.
+
+Coercion BVRef : RRef >-> BindableValue.
+Coercion BVTree : ReadableTree >-> BindableValue.
+Coercion BVName : Name >-> BindableValue.
+
+Inductive WRef :=
+| WRRef : WriteableTree -> nelist Name -> WRef.
+
+Notation "'!ref' t n" := (WRRef t (n, [])) (at level 9,
+                                           t at level 9,
+                                           right associativity).
+Notation "'!ref' t a b .. z" := (WRRef t (a, cons b .. (cons z nil) ..))
+                                  (at level 9,
+                                   t at level 9,
+                                   a at level 9,
+                                   b at level 9).
+
+Check !ref @ "a".
+
+Inductive WriteableReference :=
+| WRWRef : WRef -> WriteableReference
+| WRWTree : WriteableTree -> WriteableReference.
+
+Coercion WRWRef : WRef >-> WriteableReference.
+Coercion WRWTree : WriteableTree >-> WriteableReference.
+
+Inductive Expression :=
+| EWR : WriteableReference -> Expression
+| EBV : BindableValue -> Expression
+| ER : Request -> Expression
+| EN : Name -> Expression.
+
+Coercion EWR : WriteableReference >-> Expression.
+Coercion EBV : BindableValue >-> Expression.
+Coercion ER : Request >-> Expression.
+Coercion EN : Name >-> Expression.
+                
+Inductive Command : Type :=
+| Run : nelist Expression -> Command
+| Bind : WRef -> BindableValue -> Command.
+
+Notation "'run' a" := (Run (a, [])) (at level 9,
+                                     right associativity).
+Notation "'run' a b .. z" := (Run (a, cons b .. (cons z nil) ..))
+                               (at level 9,
+                                a at level 9,
+                                b at level 9).
+Notation "'bind' wre bve" := (Bind wre bve) (at level 9,
+                                            wre at level 9).
+
+Check run
+      ("a" : Expression)
+      (get (ref @ "") : Expression).
+Check bind (!ref @ "") "a".
+
+Definition Program := list Command.
