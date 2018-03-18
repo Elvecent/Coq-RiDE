@@ -87,12 +87,64 @@ Coercion EN : Name >-> Expression.
 
 (* Run *)
 
+Lemma list_to_nelist : forall X (l : list X), l <> nil -> nelist X.
+Proof.
+  intros. destruct l.
+  - congruence.
+  - split; assumption.
+Qed.
+
+Close Scope nat_scope.
+
+Definition exp := WriteableReference + BindableValue + Request + Name.
+
+Coercion wrexp := fun (wr : WriteableReference) => inl (inl (inl wr)) : exp.
+Coercion bvexp := fun (bv : BindableValue) => inl (inl (inr bv)) : exp.
+Coercion rexp := fun (r : Request) => inl (inr r) : exp.
+Coercion nexp := fun (n : Name) => inr n : exp.
+
+Definition exp_to_expression (e : exp) : Expression.
+Proof.
+  destruct e. destruct s. destruct s.
+  - apply EWR. assumption.
+  - apply EBV. assumption.
+  - apply ER. assumption.
+  - apply EN. assumption.
+Qed.
+
+Inductive expList :=
+| elNil : expList
+| elCons : exp -> expList -> expList.
+
+Fixpoint expList_to_list (l : expList) : list Expression :=
+  match l with
+  | elNil => nil
+  | elCons a l => cons (exp_to_expression a) (expList_to_list l)
+  end.
+
+Definition expList_to_nelist (l : expList) :
+  l <> elNil -> nelist Expression.
+Proof.
+  intros. apply list_to_nelist with (expList_to_list l).
+  destruct l.
+  - congruence.
+  - simpl. intros contra. congruence.
+Qed.
+
+Lemma elCons_neq_elNil : forall a l, elCons a l <> elNil.
+Proof.
+  intros a l c.
+  inversion c.
+Qed.
+
 Notation "'run' a" := (Run (a, [])) (at level 9,
                                      right associativity).
-Notation "'run' a b .. z" := (Run (a, cons b .. (cons z nil) ..))
-                               (at level 9,
-                                a at level 9,
-                                b at level 9).
+Notation "'run' a b .. z" := (Run (expList_to_nelist
+                                     (elCons a (elCons b .. (elCons z elNil) ..))
+                                     (elCons_neq_elNil a _)))
+                                   (at level 9,
+                                    a at level 9,
+                                    b at level 9).
 
 (* Bind *)
 

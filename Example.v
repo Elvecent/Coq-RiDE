@@ -18,11 +18,9 @@ Check ref @ "a" "b".
 Check get (ref @ "a").
 Check !ref @ "a".
 
-(* For mysterious reasons all run constructions have to be 
-   supplied with ": Expression" for their arguments. *)
 Check run
-      ("a" : Expression)
-      (get (ref @ "") : Expression).
+      "a"
+      (get (ref @ "")).
 Check bind (!ref @ "") "a".
 
 
@@ -33,8 +31,8 @@ Definition prog : Program :=
       (tree @ (span "a" "z")) ;
 
     run
-      (get (ref @ "a") : Expression)
-      ("a" : Expression) ;
+      (get (ref @ "a"))
+      "a" ;
 
     bind
       (!ref @ "a" "b")
