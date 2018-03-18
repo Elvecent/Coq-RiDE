@@ -3,6 +3,7 @@ Import Coq.Lists.List.ListNotations.
 
 Open Scope string_scope.
 Open Scope list_scope.
+Close Scope nat_scope.
 
 Definition Name := string.
 
@@ -12,9 +13,13 @@ Definition nelist A := (A * list A)%type.
 Inductive Span :=
 | SSpan : Name -> Name -> Span.
 
+Definition SpanExp := Span + Name.
+
+(*
 Inductive SpanExp :=
 | SESpan : Span -> SpanExp
 | SEName : Name -> SpanExp.
+ *)
 
 Inductive WriteableTree :=
 | WTRoot : WriteableTree
@@ -33,24 +38,36 @@ Inductive RRef :=
 Inductive Request :=
 | Get : RRef -> Request.
 
+Definition BindableValue := RRef + ReadableTree + Name.
+
+(*
 Inductive BindableValue :=
 | BVRef : RRef -> BindableValue
 | BVTree : ReadableTree -> BindableValue
 | BVName : Name -> BindableValue.
+*)
 
 Inductive WRef :=
 | WRRef : WriteableTree -> nelist Name -> WRef.
 
+Definition WriteableReference := WRef + WriteableTree.
+
+(*
 Inductive WriteableReference :=
 | WRWRef : WRef -> WriteableReference
 | WRWTree : WriteableTree -> WriteableReference.
+*)
 
+Definition Expression := WriteableReference + BindableValue + Request + Name.
+
+(*
 Inductive Expression :=
 | EWR : WriteableReference -> Expression
 | EBV : BindableValue -> Expression
 | ER : Request -> Expression
 | EN : Name -> Expression.
-                
+*)  
+              
 Inductive Command : Type :=
 | Run : nelist Expression -> Command
 | Bind : WRef -> BindableValue -> Command.

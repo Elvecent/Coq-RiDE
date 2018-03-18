@@ -12,8 +12,8 @@ Coercion name := fun (s : string) => s : Name.
 
 (* Span *)
 
-Coercion SEName : Name >-> SpanExp.
-Notation "'span'" := (fun a b => SESpan (SSpan a b)) (at level 9).
+Coercion name_span := fun n : Name => inr n : SpanExp.
+Notation "'span'" := (fun a b => inl (SSpan a b) : SpanExp) (at level 9).
 
 (* WTree *)
 
@@ -58,9 +58,9 @@ Notation "'get' r" := (Get r) (at level 9).
 
 (* Bindablevalue *)
 
-Coercion BVRef : RRef >-> BindableValue.
-Coercion BVTree : ReadableTree >-> BindableValue.
-Coercion BVName : Name >-> BindableValue.
+Coercion rref_bv := fun (r : RRef) => inl (inl r) : BindableValue.
+Coercion rtree_bv := fun (t : ReadableTree) => inl (inr t) : BindableValue.
+Coercion name_bv := fun (n : Name) => inr n : BindableValue.
 
 (* WRef *)
 
@@ -75,15 +75,21 @@ Notation "'!ref' t a b .. z" := (WRRef t (a, cons b .. (cons z nil) ..))
 
 (* Writeablereference *)
 
-Coercion WRWRef : WRef >-> WriteableReference.
-Coercion WRWTree : WriteableTree >-> WriteableReference.
+Coercion wref_wr := fun (wr : WRef) => inl wr : WriteableReference.
+Coercion wtree_wr := fun (t : WriteableTree) => inr t : WriteableReference.
 
 (* Expression *)
 
-Coercion EWR : WriteableReference >-> Expression.
-Coercion EBV : BindableValue >-> Expression.
-Coercion ER : Request >-> Expression.
-Coercion EN : Name >-> Expression.
+
+Coercion wrexp := fun (wr : WriteableReference) =>
+                    inl (inl (inl wr)) : Expression.
+Coercion bvexp := fun (bv : BindableValue) =>
+                    inl (inl (inr bv)) : Expression.
+Coercion rexp := fun (r : Request) =>
+                   inl (inr r) : Expression.
+Coercion nexp := fun (n : Name) =>
+                   inr n : Expression.
+
 
 (* Run *)
 
@@ -94,32 +100,14 @@ Proof.
   - split; assumption.
 Qed.
 
-Close Scope nat_scope.
-
-Definition exp := WriteableReference + BindableValue + Request + Name.
-
-Coercion wrexp := fun (wr : WriteableReference) => inl (inl (inl wr)) : exp.
-Coercion bvexp := fun (bv : BindableValue) => inl (inl (inr bv)) : exp.
-Coercion rexp := fun (r : Request) => inl (inr r) : exp.
-Coercion nexp := fun (n : Name) => inr n : exp.
-
-Definition exp_to_expression (e : exp) : Expression.
-Proof.
-  destruct e. destruct s. destruct s.
-  - apply EWR. assumption.
-  - apply EBV. assumption.
-  - apply ER. assumption.
-  - apply EN. assumption.
-Qed.
-
 Inductive expList :=
 | elNil : expList
-| elCons : exp -> expList -> expList.
+| elCons : Expression -> expList -> expList.
 
 Fixpoint expList_to_list (l : expList) : list Expression :=
   match l with
   | elNil => nil
-  | elCons a l => cons (exp_to_expression a) (expList_to_list l)
+  | elCons a l => cons a (expList_to_list l)
   end.
 
 Definition expList_to_nelist (l : expList) :
@@ -128,7 +116,7 @@ Proof.
   intros. apply list_to_nelist with (expList_to_list l).
   destruct l.
   - congruence.
-  - simpl. intros contra. congruence.
+  - simpl. congruence.
 Qed.
 
 Lemma elCons_neq_elNil : forall a l, elCons a l <> elNil.
@@ -140,8 +128,12 @@ Qed.
 Notation "'run' a" := (Run (a, [])) (at level 9,
                                      right associativity).
 Notation "'run' a b .. z" := (Run (expList_to_nelist
-                                     (elCons a (elCons b .. (elCons z elNil) ..))
-                                     (elCons_neq_elNil a _)))
+                                     (elCons
+                                        a
+                                        (elCons
+                                           b ..
+                                           (elCons z elNil) ..))
+                                     (elCons_neq_elNil _ _)))
                                    (at level 9,
                                     a at level 9,
                                     b at level 9).
