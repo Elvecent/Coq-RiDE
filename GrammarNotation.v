@@ -12,8 +12,8 @@ Coercion name := fun (s : string) => s : Name.
 
 (* Span *)
 
-Coercion name_span := fun n : Name => inr n : SpanExp.
-Notation "'span'" := (fun a b => inl (SSpan a b) : SpanExp) (at level 9).
+Coercion name_span := fun n : Name =>  SEName n : SpanExp.
+Notation "'span'" := (fun a b => (SESpan (SSpan a b)) : SpanExp) (at level 9).
 
 (* WTree *)
 
@@ -58,9 +58,9 @@ Notation "'get' r" := (Get r) (at level 9).
 
 (* Bindablevalue *)
 
-Coercion rref_bv := fun (r : RRef) => inl (inl r) : BindableValue.
-Coercion rtree_bv := fun (t : ReadableTree) => inl (inr t) : BindableValue.
-Coercion name_bv := fun (n : Name) => inr n : BindableValue.
+Coercion rref_bv := fun (r : RRef) => BVRef r : BindableValue.
+Coercion rtree_bv := fun (t : ReadableTree) => BVTree t : BindableValue.
+Coercion name_bv := fun (n : Name) => BVName n : BindableValue.
 
 (* WRef *)
 
@@ -75,20 +75,20 @@ Notation "'!ref' t a b .. z" := (WRRef t (a, cons b .. (cons z nil) ..))
 
 (* Writeablereference *)
 
-Coercion wref_wr := fun (wr : WRef) => inl wr : WriteableReference.
-Coercion wtree_wr := fun (t : WriteableTree) => inr t : WriteableReference.
+Coercion wref_wr := fun (wr : WRef) => WRWRef wr : WriteableReference.
+Coercion wtree_wr := fun (t : WriteableTree) => WRWTree t : WriteableReference.
 
 (* Expression *)
 
 
 Coercion wrexp := fun (wr : WriteableReference) =>
-                    inl (inl (inl wr)) : Expression.
+                    EWR wr : Expression.
 Coercion bvexp := fun (bv : BindableValue) =>
-                    inl (inl (inr bv)) : Expression.
+                    EBV bv : Expression.
 Coercion rexp := fun (r : Request) =>
-                   inl (inr r) : Expression.
+                   ER r : Expression.
 Coercion nexp := fun (n : Name) =>
-                   inr n : Expression.
+                   EN n : Expression.
 
 
 (* Run *)
@@ -119,21 +119,25 @@ Proof.
   - simpl. congruence.
 Qed.
 
-Lemma elCons_neq_elNil : forall a l, elCons a l <> elNil.
+Lemma elCons_neq_elNil : forall {a l}, elCons a l <> elNil.
 Proof.
   intros a l c.
   inversion c.
 Qed.
 
-Notation "'run' a" := (Run (a, [])) (at level 9,
-                                     right associativity).
+Notation "'run' a" := (Run (expList_to_nelist
+                              (elCons a elNil)
+                              elCons_neq_elNil ))
+                        (at level 9,
+                         right associativity).
+
 Notation "'run' a b .. z" := (Run (expList_to_nelist
                                      (elCons
                                         a
                                         (elCons
                                            b ..
                                            (elCons z elNil) ..))
-                                     (elCons_neq_elNil _ _)))
+                                     elCons_neq_elNil))
                                    (at level 9,
                                     a at level 9,
                                     b at level 9).
