@@ -93,37 +93,43 @@ Coercion nexp := fun (n : Name) =>
 
 (* Run *)
 
-Lemma list_to_nelist : forall X (l : list X), l <> nil -> nelist X.
-Proof.
-  intros. destruct l.
-  - congruence.
-  - split; assumption.
-Qed.
+Module AuxForRun.
+  
+  Lemma list_to_nelist : forall X (l : list X), l <> nil -> nelist X.
+  Proof.
+    intros. destruct l.
+    - congruence.
+    - split; assumption.
+  Qed.
+  
+  Inductive expList :=
+  | elNil : expList
+  | elCons : Expression -> expList -> expList.
+  
+  Fixpoint expList_to_list (l : expList) : list Expression :=
+    match l with
+    | elNil => nil
+    | elCons a l => cons a (expList_to_list l)
+    end.
+  
+  Definition expList_to_nelist (l : expList) :
+    l <> elNil -> nelist Expression.
+  Proof.
+    intros. apply list_to_nelist with (expList_to_list l).
+    destruct l.
+    - congruence.
+    - simpl. congruence.
+  Qed.
+  
+  Lemma elCons_neq_elNil : forall {a l}, elCons a l <> elNil.
+  Proof.
+    intros a l c.
+    inversion c.
+  Qed.
+  
+End AuxForRun.
 
-Inductive expList :=
-| elNil : expList
-| elCons : Expression -> expList -> expList.
-
-Fixpoint expList_to_list (l : expList) : list Expression :=
-  match l with
-  | elNil => nil
-  | elCons a l => cons a (expList_to_list l)
-  end.
-
-Definition expList_to_nelist (l : expList) :
-  l <> elNil -> nelist Expression.
-Proof.
-  intros. apply list_to_nelist with (expList_to_list l).
-  destruct l.
-  - congruence.
-  - simpl. congruence.
-Qed.
-
-Lemma elCons_neq_elNil : forall {a l}, elCons a l <> elNil.
-Proof.
-  intros a l c.
-  inversion c.
-Qed.
+Import AuxForRun.
 
 Notation "'run' a" := (Run (expList_to_nelist
                               (elCons a elNil)

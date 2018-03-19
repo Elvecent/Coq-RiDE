@@ -7,7 +7,6 @@ Import ListNotations.
 Open Scope list_scope.
 Open Scope string_scope.
 
-
 Check (span "a" "b").
 Check !tree @ (span "a" "b").
 Check (!tree @ (span "a" "b") (span "c" "g")).
